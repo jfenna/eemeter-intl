@@ -27,6 +27,7 @@ from eemeter.features import (
 )
 from eemeter.segmentation import iterate_segmented_dataset
 from eemeter.caltrack.hourly import caltrack_hourly_fit_feature_processor
+from pkg_resources import resource_filename
 
 
 __all__ = (
@@ -37,7 +38,7 @@ __all__ = (
 )
 
 
-def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data):
+def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data, region:str='USA'):
     """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
 
@@ -47,29 +48,38 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
+        specified for alignment with eeweather conventions.
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrix with meter_value, hour_of_week, hdd_50, and cdd_65 features.
+        A design matrix with meter_value, hour_of_week, hdd_(hbp_default), and cdd_(cbp_default) features.
     """
+    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
+    region_info = pd.read_csv(temperature_filename, index_col=0)
+    cbp_default = int(region_info.loc["cbp", region])
+    hbp_default = int(region_info.loc["hbp", region])
+
     time_features = compute_time_features(
         meter_data.index, hour_of_week=True, hour_of_day=False, day_of_week=False
     )
+
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=[50],
-        cooling_balance_points=[65],
+        heating_balance_points=[hbp_default],
+        cooling_balance_points=[cbp_default],
         degree_day_method="hourly",
     )
+
     design_matrix = merge_features(
         [meter_data.value.to_frame("meter_value"), temperature_features, time_features]
     )
     return design_matrix
 
-
-def create_caltrack_billing_design_matrix(meter_data, temperature_data):
+def create_caltrack_billing_design_matrix(meter_data, temperature_data, region:str='USA'):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
 
@@ -79,19 +89,26 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
+        specified for alignment with eeweather conventions.
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        A design matrix with mean usage_per_day, hdd_min-hdd_max, and cdd_min-cdd_max
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
+    region_info = pd.read_csv(temperature_filename, index_col=0)
+    bp_lower_bound = int(region_info.loc["bin1", region])
+    bp_upper_bound = int(region_info.loc["bin6", region])
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(30, 91),
-        cooling_balance_points=range(30, 91),
+        heating_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
+        cooling_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
         data_quality=True,
         tolerance=pd.Timedelta(
             "35D"
@@ -101,7 +118,7 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
     return design_matrix
 
 
-def create_caltrack_daily_design_matrix(meter_data, temperature_data):
+def create_caltrack_daily_design_matrix(meter_data, temperature_data, region:str = 'USA'):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
 
@@ -111,19 +128,26 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data):
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
+        specified for alignment with eeweather conventions.
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        A design matrix with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
+    region_info = pd.read_csv(temperature_filename, index_col=0)
+    bp_lower_bound = int(region_info.loc["bin1", region])
+    bp_upper_bound = int(region_info.loc["bin6", region])
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(30, 91),
-        cooling_balance_points=range(30, 91),
+        heating_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
+        cooling_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
         data_quality=True,
     )
     design_matrix = merge_features([usage_per_day, temperature_features])
@@ -139,7 +163,6 @@ def create_caltrack_hourly_segmented_design_matrices(
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with segmented CalTRACK hourly models.
-
     Parameters
     ----------
     preliminary_design_matrix : :any:`pandas.DataFrame`
@@ -156,7 +179,6 @@ def create_caltrack_hourly_segmented_design_matrices(
         form returned by :any:`eemeter.fit_temperature_bins`.
     unoccupied_temperature_bins : :any:``
         Ditto, for unoccupied.
-
     Returns
     -------
     design_matrix : :any:`dict` of :any:`pandas.DataFrame`

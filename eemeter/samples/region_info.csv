@@ -1,0 +1,16 @@
+,UK,USA,France,Germany,Spain,South Korea
+degC,degC,degF,degC,degC,degC,degC
+hbp,16,50,18,15,15,18
+cbp,100,65,,,,
+bin1,-2,30,-2,-2,-2,-2
+bin2,6,45,6,6,6,6
+bin3,12,55,12,12,12,12
+bin4,18,65,18,18,18,18
+bin5,24,75,24,24,24,24
+bin6,32,90,32,32,32,32
+,,,,,,
+,,,,,,
+,,,,,,
+References,,,,,,
+https://support.dexma.com/hc/en-gb/articles/360007866374-Degree-Days-in-DEXMA,"France, UK, Spain base temperatures",,,,,
+https://journals.ametsoc.org/view/journals/apme/53/2/jamc-d-13-0220.1.xml,"Germany, South Korea base temperatures",,,,,
