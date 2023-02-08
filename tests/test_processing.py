@@ -118,8 +118,6 @@ def test_format_temperature_data_for_eemeter(
     assert temperature_data_reformatted.index.freq == 'H'
     assert temperature_data_reformatted.index.tzinfo is not None
 
-#consider whether test needed for eemeter_hourly.
-
 def test_format_energy_data_for_eemeter_daily(
         il_electricity_cdd_hdd_daily
 ):
@@ -142,6 +140,32 @@ def test_format_energy_data_for_eemeter_daily(
     assert isinstance(df_reformatted, pd.DataFrame)
     assert df_reformatted.index[0] < df_reformatted.index[-1]
     assert df_reformatted.index.freq == 'D'
+    assert df_reformatted.columns[0] == 'value'
+    assert df_reformatted.index.tzinfo is not None
+    assert len(df_reformatted.columns) == 1
+
+def test_format_energy_data_for_eemeter_billing(
+            il_electricity_cdd_hdd_daily
+):
+    df = il_electricity_cdd_hdd_daily["meter_data"]
+    # flipping df
+    df = df.reindex(index=df.index[::-1])
+
+    # inserting new value of 0.04 at 09.34 22/11/2015
+    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize('UTC')
+    df.loc[new_start] = [0.04]
+
+    # rename column name to 'consumption'
+    df.rename(columns={'value': 'consumption'}, inplace=True)
+
+    # df_flipped to pd.Series
+    df = df.squeeze()
+
+    df_reformatted = format_energy_data_for_eemeter_billing(df)
+
+    assert isinstance(df_reformatted, pd.DataFrame)
+    assert df_reformatted.index[0] < df_reformatted.index[-1]
+    assert df_reformatted.index.freq == 'M'
     assert df_reformatted.columns[0] == 'value'
     assert df_reformatted.index.tzinfo is not None
     assert len(df_reformatted.columns) == 1
