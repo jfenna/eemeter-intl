@@ -5,11 +5,9 @@ __all__ = (
     "add_freq",
     "trim",
     "sum_gas_and_elec",
-    "format_energy_data_for_eemeter_hourly",
+    "format_energy_data_for_eemeter",
     "format_temperature_data_for_eemeter",
     "eemeter_hourly",
-    "format_energy_data_for_eemeter_daily",
-    "format_energy_data_for_eemeter_billing",
     'eemeter_daily'
 )
 
@@ -180,8 +178,8 @@ def _format_data_for_eemeter_hourly(df, tz='UTC'):
     else:
         return None
 
-def format_energy_data_for_eemeter_hourly(
-    *args, tz = 'UTC'
+def format_energy_data_for_eemeter(
+    *args, method = 'hourly', tz = 'UTC'
 ):
     """A helper function which ensures energy consumption data is formatted for eemeter processing.
 
@@ -189,6 +187,9 @@ def format_energy_data_for_eemeter_hourly(
     ----------
     *args : :one or more `pandas.DataFrame`s
         Energy consumption time series data. Consumption must be measured in the same units.
+    method : : any valid 'str'
+        The relevant eemeter model requiring formatting. Must be either 'hourly', 'daily', or 'billing'. Defaults to
+        'hourly'.
     tz : : any valid timezone 'str'
         The timezone associated with the given dataframes. If timezone-naive, function will localise to 'UTC' as
         default.
@@ -199,12 +200,21 @@ def format_energy_data_for_eemeter_hourly(
         A list of dataframes comprising energy consumption data in eemeter format.
     """
 
+    if method == 'hourly':
+        freq = 'H'
+    elif method == 'daily':
+        freq = 'D'
+    elif method == 'billing':
+        freq = 'M'
+    else:
+        raise ValueError("'method' must be either 'hourly', 'daily' or 'billing'.")
+
     args_tuple = ()
     for df in args:
         df = _format_data_for_eemeter_hourly(df, tz)
         if not isinstance(df, pd.DataFrame):
             df = pd.DataFrame(df)
-        df = df.resample('H').sum()
+        df = df.resample(freq).sum()
         df.index = df.index.rename('start')
         args_tuple = args_tuple + (df,)
         if df.columns[0] != 'value':
@@ -215,7 +225,7 @@ def format_energy_data_for_eemeter_hourly(
         return args_tuple[0]
     else:
         args_list = list(args_tuple)
-        args_list[-1], args_list[-2] = trim(args_list[-1], args_list[-2], freq='H')
+        args_list[-1], args_list[-2] = trim(args_list[-1], args_list[-2], freq=freq)
         args_tuple = tuple(args_list)
         return args_tuple
 
@@ -360,82 +370,6 @@ def eemeter_hourly(
     )
 
     return metered_savings_dataframe
-
-def format_energy_data_for_eemeter_daily(
-    *args, tz = 'UTC'
-):
-    """A helper function which ensures energy consumption data is formatted for eemeter processing.
-
-    Parameters
-    ----------
-    *args : :one or more `pandas.DataFrame`s
-        Energy consumption time series data. Consumption must be measured in the same units.
-    tz : : any valid timezone 'str'
-        The timezone associated with the given dataframes. If timezone-naive, function will localise to 'UTC' as
-        default.
-
-    Returns
-    -------
-    args_tuple : any 'list' containing one or more 'pandas.DataFrame's
-        A list of dataframes comprising energy consumption data in eemeter format.
-    """
-
-    args_tuple = ()
-    for df in args:
-        df = _format_data_for_eemeter_hourly(df, tz)
-        if not isinstance(df, pd.DataFrame):
-            df = pd.DataFrame(df)
-        df.index = df.index.rename('start')
-        df = df.resample('D').sum()
-        args_tuple = args_tuple + (df,)
-        if df.columns[0] != 'value':
-            current_col_name = df.columns[0]
-            df.rename(columns={current_col_name: 'value'}, inplace=True)
-    if len(args) == 1:
-        return args_tuple[0]
-    else:
-        args_list = list(args_tuple)
-        args_list[-1], args_list[-2] = trim(args_list[-1], args_list[-2], freq='D')
-        args_tuple = tuple(args_list)
-        return args_tuple
-
-def format_energy_data_for_eemeter_billing(
-    *args, tz = 'UTC'
-):
-    """A helper function which ensures energy consumption data is formatted for eemeter processing.
-
-    Parameters
-    ----------
-    *args : :one or more `pandas.DataFrame`s
-        Energy consumption time series data. Consumption must be measured in the same units.
-    tz : : any valid timezone 'str'
-        The timezone associated with the given dataframes. If timezone-naive, function will localise to 'UTC' as
-        default.
-
-    Returns
-    -------
-    args_tuple : any 'list' containing one or more 'pandas.DataFrame's
-        A list of dataframes comprising energy consumption data in eemeter format.
-    """
-
-    args_tuple = ()
-    for df in args:
-        df = _format_data_for_eemeter_hourly(df, tz)
-        if not isinstance(df, pd.DataFrame):
-            df = pd.DataFrame(df)
-        df.index = df.index.rename('start')
-        df = df.resample('M').sum()
-        args_tuple = args_tuple + (df,)
-        if df.columns[0] != 'value':
-            current_col_name = df.columns[0]
-            df.rename(columns={current_col_name: 'value'}, inplace=True)
-    if len(args) == 1:
-        return args_tuple[0]
-    else:
-        args_list = list(args_tuple)
-        args_list[-1], args_list[-2] = trim(args_list[-1], args_list[-2], freq='M')
-        args_tuple = tuple(args_list)
-        return args_tuple
 
 def eemeter_daily(
         gas,
