@@ -333,7 +333,6 @@ def eemeter_hourly(
         unoccupied_temperature_bins,
     ) = eemeter.fit_temperature_bins(
         preliminary_design_matrix,
-        region=region,
         segmentation=segmentation,
         occupancy_lookup=occupancy_lookup,
     )
@@ -367,6 +366,7 @@ def eemeter_hourly(
         reporting_meter_data,
         temperature_data,
         with_disaggregated=True,
+        region=region
     )
 
     return metered_savings_dataframe
@@ -379,6 +379,7 @@ def eemeter_daily(
         blackout_end_date,
         region:str = 'USA'
 ):
+
     meter_data = sum_gas_and_elec(gas, elec)
 
     # get meter data suitable for fitting a baseline model
@@ -407,7 +408,7 @@ def eemeter_daily(
     # compute metered savings for the year of the reporting period we've selected
     metered_savings_dataframe, error_bands = eemeter.metered_savings(
         baseline_model, reporting_meter_data,
-        temperature_data, with_disaggregated=True
+        temperature_data, with_disaggregated=True, region=region
     )
 
     return metered_savings_dataframe

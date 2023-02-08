@@ -694,9 +694,9 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
 
 def fit_temperature_bins(
     data,
-    region:str = 'USA',
     segmentation=None,
     occupancy_lookup=None,
+    default_bins=[30, 45, 55, 65, 75, 90],
     min_temperature_count=20,
 ):
     """Determine appropriate temperature bins for a particular set of temperature
@@ -727,9 +727,6 @@ def fit_temperature_bins(
         A dataframe with boolean values indicating whether or not a bin was kept, with a
         categorical index for each candidate bin endpoint and a column for each segment.
     """
-    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
-    region_info = pd.read_csv(temperature_filename, index_col=0)
-    default_bins = list(map(int, region_info.loc["bin1":"bin6", region]))
 
     if occupancy_lookup is None:
         segmented_bins = {}

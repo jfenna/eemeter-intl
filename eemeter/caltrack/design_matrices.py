@@ -62,6 +62,9 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
     cbp_default = int(region_info.loc["cbp", region])
     hbp_default = int(region_info.loc["hbp", region])
 
+    if region != 'USA':
+        temperature_data = 32 + (temperature_data * 1.8)
+
     time_features = compute_time_features(
         meter_data.index, hour_of_week=True, hour_of_day=False, day_of_week=False
     )
@@ -100,15 +103,14 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data, region:s
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
-    region_info = pd.read_csv(temperature_filename, index_col=0)
-    bp_lower_bound = int(region_info.loc["bin1", region])
-    bp_upper_bound = int(region_info.loc["bin6", region])
+    if region != 'USA':
+        temperature_data = 32 + (temperature_data * 1.8)
+
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
-        cooling_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
+        heating_balance_points=range(30, 91),
+        cooling_balance_points=range(30, 91),
         data_quality=True,
         tolerance=pd.Timedelta(
             "35D"
@@ -139,15 +141,14 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data, region:str
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
-    region_info = pd.read_csv(temperature_filename, index_col=0)
-    bp_lower_bound = int(region_info.loc["bin1", region])
-    bp_upper_bound = int(region_info.loc["bin6", region])
+    if region != 'USA':
+        temperature_data = 32 + (temperature_data * 1.8)
+
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
-        cooling_balance_points=range(bp_lower_bound, bp_upper_bound + 1),
+        heating_balance_points=range(30, 91),
+        cooling_balance_points=range(30, 91),
         data_quality=True,
     )
     design_matrix = merge_features([usage_per_day, temperature_features])
