@@ -169,3 +169,5 @@ def test_format_energy_data_for_eemeter_billing(
     assert df_reformatted.columns[0] == 'value'
     assert df_reformatted.index.tzinfo is not None
     assert len(df_reformatted.columns) == 1
+
+#tests for eemeter_hourly and eemeter_daily NOT required as simply functionalising other eemeter functions (subejct to test).
